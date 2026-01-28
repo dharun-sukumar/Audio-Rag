@@ -5,12 +5,16 @@ from chunking import chunk_transcript
 from vectorstore import add_chunks
 from rag import ask
 from datetime import datetime, timezone
-from storage import generate_signed_get_url
+from storage import generate_signed_get_url, generate_signed_upload_url
 
 app = FastAPI()
 
 class AudioProcessRequest(BaseModel):
     audio_key: str  # e.g. audio/meeting.mp3
+
+class UploadRequest(BaseModel):
+    filename: str
+    mime: str
 
 @app.post("/process-audio")
 def process_audio(req: AudioProcessRequest):
@@ -41,3 +45,26 @@ def process_audio(req: AudioProcessRequest):
 @app.post("/ask")
 def ask_question(q: dict):
     return ask(q["query"])
+
+@app.post("/generate-upload-url")
+def generate_upload_url(req: UploadRequest):
+    """
+    Generates a signed PUT URL for frontend direct upload
+    """
+
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
+    safe_filename = req.filename.replace(" ", "_")
+
+    object_key = f"audio/{timestamp}_{safe_filename}"
+
+    upload_url = generate_signed_upload_url(
+        key=object_key,
+        content_type=req.mime,
+        expires_in=300  # 5 minutes
+    )
+
+    return {
+        "upload_url": upload_url,
+        "object_key": object_key,
+        "expires_in": 300
+    }

@@ -1,5 +1,51 @@
+# Python
 .venv
+venv/
+env/
+ENV/
 __pycache__
 *.pyc
-chroma_db
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Docker files
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Documentation
+README.md
+*.md
+
+# Tests
+tests/
+test_*
+*_test.py
+
+# Environment files
 .env
+.env.*
+!.env.example
+
+# Database (will be mounted as volume)
+chroma_db
+
+# Data files
+*.log
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db

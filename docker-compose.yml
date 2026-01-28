@@ -11,3 +11,30 @@ services:
       - ./data:/app/data
       - ./chroma_db:/app/chroma_db
     restart: unless-stopped
+    # Resource limits for production
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 2G
+    # Security options
+    security_opt:
+      - no-new-privileges:true
+    # Read-only root filesystem (except mounted volumes)
+    read_only: false
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

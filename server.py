@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transcription import transcribe_from_url
 from chunking import chunk_transcript
@@ -8,6 +9,15 @@ from datetime import datetime, timezone
 from storage import generate_signed_get_url, generate_signed_upload_url
 
 app = FastAPI()
+
+# Configure CORS to allow all origins
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
 
 class AudioProcessRequest(BaseModel):
     audio_key: str  # e.g. audio/meeting.mp3

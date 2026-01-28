@@ -8,7 +8,11 @@ from rag import ask
 from datetime import datetime, timezone
 from storage import generate_signed_get_url, generate_signed_upload_url
 
-app = FastAPI()
+app = FastAPI(
+    servers=[
+        {"url": "http://139.59.19.169", "description": "production"}
+    ]
+)
 
 # Configure CORS to allow all origins
 app.add_middleware(

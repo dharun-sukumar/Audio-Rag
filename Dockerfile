@@ -1,39 +1,38 @@
-# Multi-stage build for production
-FROM python:3.12-slim AS base
+FROM python:3.12-slim
 
-# Install security updates and required system dependencies
+# System deps
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends \
-    curl \
-    && apt-get clean \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Create non-root user WITH home directory (CRITICAL)
+RUN groupadd -r appuser && \
+    useradd -r -g appuser -m -d /home/appuser appuser
 
 WORKDIR /app
 
-# Install Python dependencies
+# Force all ML caches to a writable location
+ENV HOME=/home/appuser \
+    HF_HOME=/app/.hf_cache \
+    TRANSFORMERS_CACHE=/app/.hf_cache \
+    SENTENCE_TRANSFORMERS_HOME=/app/.hf_cache
+
+# Install Python deps
 COPY requirements.txt ./
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
+# Copy app code
 COPY --chown=appuser:appuser . .
 
-# Create necessary directories with proper permissions
-RUN mkdir -p /app/chroma_db /app/data && \
-    chown -R appuser:appuser /app
+# Create required dirs and fix ownership
+RUN mkdir -p /app/chroma_db /app/data /app/.hf_cache && \
+    chown -R appuser:appuser /app /home/appuser
 
-# Switch to non-root user
+# Drop root
 USER appuser
 
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/docs || exit 1
-
-# Use gunicorn with uvicorn workers for production
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "4", "--log-level", "info"]
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

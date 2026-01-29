@@ -14,13 +14,15 @@ def add_chunks(
     user: User,
     chunks: list,
     source: str,
-    filename: str
+    filename: str,
+    status: str = "indexed"
 ):
     # 1. Create Document record
     doc = Document(
         user_id=user.id,
         filename=filename,
-        source_key=source
+        source_key=source,
+        status=status
     )
     db.add(doc)
     db.flush() # flush to get doc.id

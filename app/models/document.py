@@ -12,6 +12,7 @@ class Document(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     filename = Column(String, nullable=False)
     source_key = Column(String, nullable=False)
+    status = Column(String, default="processing")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User")

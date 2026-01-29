@@ -1,5 +1,5 @@
 import boto3
-from config import REGION, ENDPOINT, BUCKET
+from config import REGION, ENDPOINT, BUCKET, ACCESS_KEY, SECRET_KEY
 
 session = boto3.session.Session()
 
@@ -7,8 +7,8 @@ s3 = session.client(
     "s3",
     region_name=REGION,
     endpoint_url=ENDPOINT,
-    aws_access_key_id="YOUR_ACCESS_KEY",
-    aws_secret_access_key="YOUR_SECRET_KEY",
+    aws_access_key_id=ACCESS_KEY,
+    aws_secret_access_key=SECRET_KEY,
 )
 
 def generate_signed_upload_url(

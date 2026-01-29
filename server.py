@@ -37,6 +37,13 @@ def process_audio(req: AudioProcessRequest):
     transcript = transcribe_from_url(signed_url)
     chunks = chunk_transcript(transcript)
 
+    if not chunks:
+        return {
+            "status": "error",
+            "message": "No chunks generated from transcript",
+            "transcript_words": len(transcript.get("words", [])),
+        }
+
     uploaded_at = datetime.now(timezone.utc)
     date_str = uploaded_at.date().isoformat()
     filename = req.audio_key.split("/")[-1]

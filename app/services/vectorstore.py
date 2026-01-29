@@ -1,29 +1,48 @@
-from langchain_chroma import Chroma
+from sqlalchemy.orm import Session
+from app.models.document import Document
+from app.models.chunk import Chunk
+from app.models.user import User
 from langchain_huggingface import HuggingFaceEmbeddings
-from app.core.config import DB_DIR
 
-embeddings = HuggingFaceEmbeddings(
+# Initialize embeddings model once
+embeddings_model = HuggingFaceEmbeddings(
     model_name="sentence-transformers/all-MiniLM-L6-v2"
 )
 
-vectorstore = Chroma(
-    persist_directory=DB_DIR,
-    embedding_function=embeddings
-)
+def add_chunks(
+    db: Session,
+    user: User,
+    chunks: list,
+    source: str,
+    filename: str
+):
+    # 1. Create Document record
+    doc = Document(
+        user_id=user.id,
+        filename=filename,
+        source_key=source
+    )
+    db.add(doc)
+    db.flush() # flush to get doc.id
 
-def add_chunks(chunks, source, filename, uploaded_at, date):
-    texts = []
-    metadatas = []
+    # 2. Prepare Chunk records
+    chunk_objects = []
+    
+    # Batch compute embeddings for efficiency
+    texts = [c["text"] for c in chunks]
+    vectors = embeddings_model.embed_documents(texts)
 
-    for c in chunks:
-        texts.append(c["text"])
-        metadatas.append({
-            "source": source,
-            "filename": filename,
-            "uploaded_at": uploaded_at,
-            "date": date,
-            "start": c.get("start"),
-            "end": c.get("end"),
-        })
+    for i, c in enumerate(chunks):
+        chunk = Chunk(
+            document_id=doc.id,
+            user_id=user.id,
+            content=c["text"],
+            embedding=vectors[i]
+        )
+        chunk_objects.append(chunk)
 
-    vectorstore.add_texts(texts, metadatas=metadatas)
+    # 3. Bulk insert chunks
+    db.add_all(chunk_objects)
+    db.commit()
+    
+    return doc.id

@@ -1,11 +1,10 @@
 langchain
 langchain-community
-langchain_chroma
+langchain
+langchain-community
 langchain-core
 pymupdf
 sentence-transformers
-faiss-cpu
-chromadb
 langchain-ollama
 uvicorn
 fastapi
@@ -20,3 +19,6 @@ tqdm
 assemblyai
 google-auth
 requests
+psycopg2-binary
+sqlalchemy
+pgvector

@@ -33,8 +33,9 @@ def verify_google_token(
             "picture": idinfo.get("picture")
         }
 
-    except Exception:
+    except Exception as e:
+        print(f"Token verification failed: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired Google token"
+            detail=f"Invalid or expired Google token: {str(e)}"
         )

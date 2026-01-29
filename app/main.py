@@ -1,14 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from app.services.transcription import transcribe_from_url
-from app.services.chunking import chunk_transcript
-from app.services.vectorstore import add_chunks
-from app.services.rag import ask
-from datetime import datetime, timezone
-from app.services.storage import generate_signed_get_url, generate_signed_upload_url
-from fastapi import Depends
-from app.core.auth import verify_google_token
+from app.core.database import engine, Base
+from app.api.routes import audio, ask
+
+# Create tables on startup (simple migration strategy)
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     servers=[
@@ -17,78 +13,19 @@ app = FastAPI(
     ]
 )
 
-# Configure CORS to allow all origins
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["*"],  # Allows all methods
-    allow_headers=["*"],  # Allows all headers
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-class AudioProcessRequest(BaseModel):
-    audio_key: str  # e.g. audio/meeting.mp3
+# Include routers
+app.include_router(audio.router)
+app.include_router(ask.router)
 
-class UploadRequest(BaseModel):
-    filename: str
-    mime: str
-
-@app.post("/process-audio")
-def process_audio(req: AudioProcessRequest, user=Depends(verify_google_token)):
-    signed_url = generate_signed_get_url(req.audio_key)
-
-    transcript = transcribe_from_url(signed_url)
-    chunks = chunk_transcript(transcript)
-
-    if not chunks:
-        return {
-            "status": "error",
-            "message": "No chunks generated from transcript",
-            "transcript_words": len(transcript.get("words", [])),
-        }
-
-    uploaded_at = datetime.now(timezone.utc)
-    date_str = uploaded_at.date().isoformat()
-    filename = req.audio_key.split("/")[-1]
-
-    add_chunks(
-        chunks=chunks,
-        source=req.audio_key,
-        filename=filename,
-        uploaded_at=uploaded_at.isoformat(),
-        date=date_str
-    )
-
-    return {
-        "status": "indexed",
-        "chunks": len(chunks),
-        "date": date_str,
-        "filename": filename
-    }
-
-@app.post("/ask")
-def ask_question(q: dict, user=Depends(verify_google_token)):
-    return ask(q["query"])
-
-@app.post("/generate-upload-url")
-def generate_upload_url(req: UploadRequest, user=Depends(verify_google_token)):
-    """
-    Generates a signed PUT URL for frontend direct upload
-    """
-
-    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H-%M-%S")
-    safe_filename = req.filename.replace(" ", "_")
-
-    object_key = f"audio/{timestamp}_{safe_filename}"
-
-    upload_url = generate_signed_upload_url(
-        key=object_key,
-        content_type=req.mime,
-        expires_in=300  # 5 minutes
-    )
-
-    return {
-        "upload_url": upload_url,
-        "object_key": object_key,
-        "expires_in": 300
-    }
+@app.get("/")
+def health_check():
+    return {"status": "ok", "message": "RAG Backend is running"}

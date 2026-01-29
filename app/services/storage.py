@@ -1,11 +1,10 @@
 import boto3
-from config import REGION, ENDPOINT, BUCKET, ACCESS_KEY, SECRET_KEY
+from app.core.config import ENDPOINT, ACCESS_KEY, SECRET_KEY, BUCKET
 
 session = boto3.session.Session()
 
 s3 = session.client(
     "s3",
-    region_name=REGION,
     endpoint_url=ENDPOINT,
     aws_access_key_id=ACCESS_KEY,
     aws_secret_access_key=SECRET_KEY,

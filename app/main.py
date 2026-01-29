@@ -1,15 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from transcription import transcribe_from_url
-from chunking import chunk_transcript
-from vectorstore import add_chunks
-from rag import ask
+from app.services.transcription import transcribe_from_url
+from app.services.chunking import chunk_transcript
+from app.services.vectorstore import add_chunks
+from app.services.rag import ask
 from datetime import datetime, timezone
-from storage import generate_signed_get_url, generate_signed_upload_url
+from app.services.storage import generate_signed_get_url, generate_signed_upload_url
+from fastapi import Depends
+from app.core.auth import verify_google_token
 
 app = FastAPI(
     servers=[
+        {"url": "http://localhost:8000", "description": "local"},
         {"url": "http://139.59.19.169", "description": "production"}
     ]
 )
@@ -31,7 +34,7 @@ class UploadRequest(BaseModel):
     mime: str
 
 @app.post("/process-audio")
-def process_audio(req: AudioProcessRequest):
+def process_audio(req: AudioProcessRequest, user=Depends(verify_google_token)):
     signed_url = generate_signed_get_url(req.audio_key)
 
     transcript = transcribe_from_url(signed_url)
@@ -64,11 +67,11 @@ def process_audio(req: AudioProcessRequest):
     }
 
 @app.post("/ask")
-def ask_question(q: dict):
+def ask_question(q: dict, user=Depends(verify_google_token)):
     return ask(q["query"])
 
 @app.post("/generate-upload-url")
-def generate_upload_url(req: UploadRequest):
+def generate_upload_url(req: UploadRequest, user=Depends(verify_google_token)):
     """
     Generates a signed PUT URL for frontend direct upload
     """

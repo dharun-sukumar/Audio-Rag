@@ -1,5 +1,5 @@
 import assemblyai as aai
-from config import ASSEMBLYAI_API_KEY
+from app.core.config import ASSEMBLYAI_API_KEY
 
 aai.settings.api_key = ASSEMBLYAI_API_KEY
 

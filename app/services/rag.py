@@ -1,7 +1,7 @@
 from langchain_groq import ChatGroq
-from config import GROQ_API_KEY
-from vectorstore import vectorstore
-from utils import is_date_question  # or paste function here
+from app.core.config import GROQ_API_KEY
+from app.services.vectorstore import vectorstore
+from app.services.utils import is_date_question  # or paste function here
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,

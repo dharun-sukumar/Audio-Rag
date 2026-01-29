@@ -18,3 +18,5 @@ dotenv
 boto3
 tqdm
 assemblyai
+google-auth
+requests

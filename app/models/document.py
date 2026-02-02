@@ -11,8 +11,10 @@ class Document(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     filename = Column(String, nullable=False)
-    source_key = Column(String, nullable=False)
+    source_key = Column(String, nullable=False)  # Audio file key in S3
+    transcript_key = Column(String, nullable=True)  # Transcription JSON key in S3
     status = Column(String, default="processing")
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     user = relationship("User")
+

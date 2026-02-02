@@ -15,13 +15,15 @@ def add_chunks(
     chunks: list,
     source: str,
     filename: str,
-    status: str = "indexed"
+    status: str = "indexed",
+    transcript_key: str = None
 ):
     # 1. Create Document record
     doc = Document(
         user_id=user.id,
         filename=filename,
         source_key=source,
+        transcript_key=transcript_key,
         status=status
     )
     db.add(doc)
@@ -48,3 +50,4 @@ def add_chunks(
     db.commit()
     
     return doc.id
+

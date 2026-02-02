@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
-from app.api.routes import audio, ask, documents
+from app.api.routes import audio, ask, documents, conversations
 
 # Create tables on startup (simple migration strategy)
 Base.metadata.create_all(bind=engine)
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(audio.router)
 app.include_router(ask.router)
 app.include_router(documents.router)
+app.include_router(conversations.router)
 
 @app.get("/")
 def health_check():

@@ -1,10 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
+from app.core.auth import initialize_firebase
 from app.api.routes import audio, ask, documents, conversations
 
 # Create tables on startup (simple migration strategy)
 Base.metadata.create_all(bind=engine)
+
+# Initialize Firebase Admin SDK
+initialize_firebase()
 
 app = FastAPI(
     servers=[
@@ -31,3 +35,4 @@ app.include_router(conversations.router)
 @app.get("/")
 def health_check():
     return {"status": "ok", "message": "RAG Backend is running"}
+

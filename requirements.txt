@@ -22,3 +22,4 @@ requests
 psycopg2-binary
 sqlalchemy
 pgvector
+firebase-admin

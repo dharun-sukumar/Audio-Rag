@@ -9,7 +9,7 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    google_sub = Column(String, unique=True, nullable=False, index=True)
+    firebase_uid = Column(String, unique=True, nullable=False, index=True)  # Firebase UID (not Google sub)
     email = Column(String, unique=True, nullable=False, index=True)
     name = Column(String, nullable=True)
     picture = Column(String, nullable=True)
@@ -17,3 +17,4 @@ class User(Base):
 
     # Relationships
     conversations = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+

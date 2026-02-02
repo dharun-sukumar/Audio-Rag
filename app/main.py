@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import audio, ask, documents
+from app.api.routes import audio, ask, documents, conversations
 from sqlalchemy import text
 from app.core.database import engine, Base
 
@@ -26,6 +26,7 @@ app.add_middleware(
 app.include_router(audio.router)
 app.include_router(ask.router)
 app.include_router(documents.router)
+app.include_router(conversations.router)
 
 
 @app.on_event("startup")

@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.database import engine, Base
 from app.core.auth import initialize_firebase
-from app.api.routes import audio, ask, documents, conversations
+from app.api.routes import audio, ask, documents, conversations, calendar
 
 # Create tables on startup (simple migration strategy)
 Base.metadata.create_all(bind=engine)
@@ -31,6 +31,7 @@ app.include_router(audio.router)
 app.include_router(ask.router)
 app.include_router(documents.router)
 app.include_router(conversations.router)
+app.include_router(calendar.router)
 
 @app.get("/")
 def health_check():

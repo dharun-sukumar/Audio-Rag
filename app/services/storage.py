@@ -109,3 +109,41 @@ def delete_from_storage(key: str) -> bool:
         # Log error but don't fail if object doesn't exist
         print(f"Warning: Failed to delete {key}: {str(e)}")
         return False
+
+# ============ Async Wrappers for Memory Service ============
+
+import uuid
+from fastapi import UploadFile
+
+async def upload_file(file: UploadFile) -> str:
+    """
+    Upload a FastAPI UploadFile to S3.
+    Returns the object key.
+    """
+    file_ext = file.filename.split('.')[-1] if '.' in file.filename else 'bin'
+    key = f"memories/{uuid.uuid4()}.{file_ext}"
+    
+    # Read file content
+    content = await file.read()
+    
+    # Upload
+    s3.put_object(
+        Bucket=BUCKET,
+        Key=key,
+        Body=content,
+        ContentType=file.content_type or 'application/octet-stream'
+    )
+    
+    return key
+
+async def get_file_url(key: str) -> str:
+    """
+    Get a signed URL for reading a file (async wrapper).
+    """
+    return generate_signed_get_url(key)
+
+async def delete_file(key: str) -> bool:
+    """
+    Delete a file (async wrapper).
+    """
+    return delete_from_storage(key)

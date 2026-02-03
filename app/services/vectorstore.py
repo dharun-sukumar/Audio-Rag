@@ -2,7 +2,10 @@ from sqlalchemy.orm import Session
 from app.models.document import Document
 from app.models.chunk import Chunk
 from app.models.user import User
+from app.models.memory import Memory
 from langchain_huggingface import HuggingFaceEmbeddings
+from typing import List, Optional
+from uuid import UUID
 
 # Initialize embeddings model once
 embeddings_model = HuggingFaceEmbeddings(
@@ -51,3 +54,31 @@ def add_chunks(
     
     return doc.id
 
+
+def add_memory_chunks(
+    db: Session,
+    user_id: UUID,
+    memory_id: UUID,
+    text_chunks: List[str]
+):
+    """
+    Generate embeddings for text chunks and save them linked to a memory.
+    """
+    if not text_chunks:
+        return
+
+    # Batch compute embeddings
+    vectors = embeddings_model.embed_documents(text_chunks)
+    
+    chunk_objects = []
+    for i, text in enumerate(text_chunks):
+        chunk = Chunk(
+            memory_id=memory_id,
+            user_id=user_id,
+            content=text,
+            embedding=vectors[i]
+        )
+        chunk_objects.append(chunk)
+    
+    db.add_all(chunk_objects)
+    db.commit()

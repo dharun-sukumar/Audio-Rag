@@ -3,7 +3,7 @@ FROM python:3.12-slim
 # System deps
 RUN apt-get update && \
     apt-get upgrade -y && \
-    apt-get install -y --no-install-recommends curl && \
+    apt-get install -y --no-install-recommends curl ffmpeg && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user WITH home directory (CRITICAL)

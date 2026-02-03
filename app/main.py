@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import audio, ask, documents, conversations
+from app.api.routes import audio, ask, documents, conversations, calendar, memories
 from sqlalchemy import text
 from app.core.database import engine, Base
 from app.core.auth import initialize_firebase
@@ -28,6 +28,8 @@ app.include_router(audio.router)
 app.include_router(ask.router)
 app.include_router(documents.router)
 app.include_router(conversations.router)
+app.include_router(calendar.router)
+app.include_router(memories.router)
 
 
 @app.on_event("startup")

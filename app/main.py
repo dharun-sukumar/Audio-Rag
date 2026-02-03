@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import audio, ask, documents, conversations
 from sqlalchemy import text
 from app.core.database import engine, Base
+from app.core.auth import initialize_firebase
 
 
 
@@ -34,6 +35,7 @@ def startup():
     with engine.begin() as conn:
         conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
     Base.metadata.create_all(bind=engine)
+    initialize_firebase()
 
 
 @app.get("/")

@@ -1,7 +1,7 @@
 from langchain_groq import ChatGroq
 from sqlalchemy.orm import Session
 from sqlalchemy import text
-from app.core.config import GROQ_API_KEY
+from app.core.config import GROQ_API_KEY, LLM_MODEL
 from app.models.chunk import Chunk
 from app.models.user import User
 from app.services.vectorstore import embeddings_model
@@ -9,8 +9,8 @@ from app.services.utils import is_date_question
 
 llm = ChatGroq(
     api_key=GROQ_API_KEY,
-    model="llama-3.1-8b-instant",
-    temperature=0.2
+    model=LLM_MODEL,
+    temperature=0
 )
 
 def ask(db: Session, user: User, query: str, k=5):

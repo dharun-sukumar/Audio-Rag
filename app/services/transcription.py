@@ -5,7 +5,8 @@ aai.settings.api_key = ASSEMBLYAI_API_KEY
 
 def transcribe_from_url(audio_url: str):
     config = aai.TranscriptionConfig(
-        speech_models=["universal"]
+        speech_models=["universal"],
+        speaker_labels=True  # Enable speaker diarization
     )
 
     transcript = aai.Transcriber(config=config).transcribe(audio_url)

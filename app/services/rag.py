@@ -1,5 +1,4 @@
 from langchain_groq import ChatGroq
-from langchain_core.messages import SystemMessage, HumanMessage
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 from app.core.config import GROQ_API_KEY, LLM_MODEL
@@ -24,14 +23,15 @@ You may ONLY:
 1) Help the user create, view, organize, or query memories
 2) Explain what actions are possible inside the app
 3) Guide the user to perform a specific app action
+4) Answer questions based on the provided "Retrieved Memory Fragments".
 
-MEMORY-DEPENDENT QUESTIONS
-- If a question requires a memory and none exists:
-  - Do NOT answer the question
-  - Redirect the user to create a memory instead
+MEMORY USAGE
+- You will be provided with "Retrieved Memory Fragments".
+- USE these fragments to answer the user's question.
+- If the fragments contain the answer, answer directly.
+- If the fragments are empty or completely irrelevant to the question, THEN redirect the user.
 
-REDIRECTION BEHAVIOR
-When a question is outside the app’s scope:
+REDIRECTION BEHAVIOR (Only if NO relevant memory found)
 - Gently redirect the user to an app action
 - Encourage uploading text, audio, or video
 - Explain how the app can help *once a memory exists*
@@ -83,14 +83,14 @@ def ask(db: Session, user: User, query: str, k=5):
     prompt = f"""
 {SYSTEM_PROMPT}
 
-Context:
+Retrieved Memory Fragments:
 {context}
 
 Question:
 {query}
 """.strip()
 
-    response = llm.invoke(messages)
+    response = llm.invoke(prompt)
 
     return {
         "answer": response.content.strip()

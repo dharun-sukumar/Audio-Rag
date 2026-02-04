@@ -64,9 +64,9 @@ async def process_memory_background(memory_id: UUID, db: Session):
                 transcript_bytes = json.dumps(transcript).encode('utf-8')
                 transcript_file = UploadFile(
                     filename=f"transcript_{memory_id}.json",
-                    file=BytesIO(transcript_bytes)
+                    file=BytesIO(transcript_bytes),
+                    headers={"content-type": "application/json"}
                 )
-                transcript_file.content_type = "application/json"
                 
                 transcript_key = await upload_file(transcript_file)
                 memory.transcript_key = transcript_key
@@ -178,9 +178,9 @@ async def extract_audio_from_video(video_key: str, db: Session) -> str:
         with open(audio_temp_path, 'rb') as audio_file:
             audio_upload = UploadFile(
                 filename=f"extracted_audio_{video_key.split('/')[-1]}.mp3",
-                file=audio_file
+                file=audio_file,
+                headers={"content-type": "audio/mpeg"}
             )
-            audio_upload.content_type = "audio/mpeg"
             audio_key = await upload_file(audio_upload)
         
         return audio_key

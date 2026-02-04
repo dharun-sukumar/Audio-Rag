@@ -201,9 +201,9 @@ class MemoryService:
         text_bytes = text_content.encode('utf-8')
         text_file = FastAPIUploadFile(
             filename=f"text_memory_{uuid.uuid4()}.txt",
-            file=BytesIO(text_bytes)
+            file=BytesIO(text_bytes),
+            headers={"content-type": "text/plain"}
         )
-        text_file.content_type = "text/plain"
         
         # Upload to storage
         source_key = await upload_file(text_file)

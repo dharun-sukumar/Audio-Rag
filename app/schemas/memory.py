@@ -69,6 +69,7 @@ class MemoryUpdate(BaseModel):
     people: Optional[List[str]] = None
     tag_ids: Optional[List[UUID]] = None
     memory_date: Optional[datetime] = None
+    text_content: Optional[str] = None # Added for text endpoint
 
 
 class MemoryResponse(MemoryBase):
@@ -121,3 +122,14 @@ class MemoryUploadMetadata(BaseModel):
     people: Optional[List[str]] = []
     tag_ids: Optional[List[UUID]] = []
     memory_date: Optional[datetime] = None
+
+
+class MemoryURLResponse(BaseModel):
+    """Schema for memory URL response"""
+    url: str
+
+
+class MemoryTextResponse(BaseModel):
+    """Schema for memory text content response"""
+    content: str
+

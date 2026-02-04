@@ -68,7 +68,9 @@ def get_calendar_data_by_date_range(
     - **start_date**: Start date in YYYY-MM-DD format
     - **end_date**: End date in YYYY-MM-DD format
     
-    **Returns:**
+    **Returns:**{
+  "query": "how can someone sleep"
+}
     - Dictionary with date strings as keys
     - Each value contains conversations, recordings, and total count for that date
     

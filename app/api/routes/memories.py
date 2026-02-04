@@ -10,7 +10,7 @@ from app.models.user import User
 from app.schemas.memory import (
     TagCreate, TagUpdate, TagResponse,
     MemoryCreate, MemoryUpdate, MemoryResponse, MemoryListResponse,
-    MemoryFilterParams, MemoryUploadMetadata
+    MemoryFilterParams, MemoryUploadMetadata, MemoryURLResponse, MemoryTextResponse
 )
 from app.services.memory_service import TagService, MemoryService
 from app.services.memory_processor import process_memory_background
@@ -306,6 +306,123 @@ async def delete_memory(
     """
     await MemoryService.delete_memory(db, user, memory_id)
     return None
+
+
+@router.get("/{memory_id}/audio-url", response_model=MemoryURLResponse)
+async def get_memory_audio_url(
+    memory_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Get the signed URL for the audio file.
+    
+    For video memories, this returns the extracted audio URL.
+    For audio memories, this returns the source file URL.
+    """
+    memory = MemoryService.get_memory(db, user, memory_id)
+    if not memory:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Memory not found"
+        )
+    
+    if memory.media_type == MediaType.TEXT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Text memories do not have audio files"
+        )
+        
+    # Determine which key to use
+    key = None
+    if memory.media_type == MediaType.AUDIO:
+        key = memory.source_key
+    elif memory.media_type == MediaType.VIDEO:
+        if memory.audio_key:
+            key = memory.audio_key
+        else:
+             # If audio key is missing for video, check status
+             if memory.status in [ProcessingStatus.PENDING, ProcessingStatus.PROCESSING]:
+                  raise HTTPException(
+                      status_code=status.HTTP_404_NOT_FOUND, 
+                      detail="Audio extraction in progress"
+                  )
+             raise HTTPException(
+                 status_code=status.HTTP_404_NOT_FOUND, 
+                 detail="Audio not available for this video"
+             )
+    
+    if not key:
+         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+
+    from app.services.storage import get_file_url
+    url = await get_file_url(key)
+    
+    return MemoryURLResponse(url=url)
+
+
+@router.get("/{memory_id}/video-url", response_model=MemoryURLResponse)
+async def get_memory_video_url(
+    memory_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Get the signed URL for the video file.
+    Only available for video memories.
+    """
+    memory = MemoryService.get_memory(db, user, memory_id)
+    if not memory:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Memory not found"
+        )
+    
+    if memory.media_type != MediaType.VIDEO:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This memory is not a video"
+        )
+        
+    # Use source_key for video file
+    from app.services.storage import get_file_url
+    url = await get_file_url(memory.source_key)
+    
+    return MemoryURLResponse(url=url)
+
+
+@router.get("/{memory_id}/text", response_model=MemoryTextResponse)
+async def get_memory_text(
+    memory_id: UUID,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user)
+):
+    """
+    Get the text content of a memory.
+    Only available for text memories.
+    """
+    memory = MemoryService.get_memory(db, user, memory_id)
+    if not memory:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Memory not found"
+        )
+    
+    if memory.media_type != MediaType.TEXT:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This memory is not a text memory"
+        )
+        
+    from app.services.storage import download_text_from_storage
+    try:
+        content = download_text_from_storage(memory.source_key)
+        return MemoryTextResponse(content=content)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve text content: {str(e)}"
+        )
 
 
 @router.get("/{memory_id}/transcript")

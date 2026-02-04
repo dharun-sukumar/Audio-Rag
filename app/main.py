@@ -5,12 +5,10 @@ from sqlalchemy import text
 from app.core.database import engine, Base
 from app.core.auth import initialize_firebase
 
-
-
 app = FastAPI(
     servers=[
         {"url": "http://localhost:8000", "description": "local"},
-        {"url": "http://139.59.19.169", "description": "production"}
+        {"url": "http://38.242.215.255:8000", "description": "production"}
     ]
 )
 

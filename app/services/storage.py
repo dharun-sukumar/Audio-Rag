@@ -89,6 +89,16 @@ def download_json_from_storage(key: str) -> Dict[Any, Any]:
     json_data = json.loads(response['Body'].read().decode('utf-8'))
     return json_data
 
+def download_text_from_storage(key: str) -> str:
+    """
+    Download and read text content from object storage
+    """
+    response = s3.get_object(
+        Bucket=BUCKET,
+        Key=key
+    )
+    return response['Body'].read().decode('utf-8')
+
 def delete_from_storage(key: str) -> bool:
     """
     Delete an object from storage

@@ -3,13 +3,15 @@ from app.models.document import Document
 from app.models.chunk import Chunk
 from app.models.user import User
 from app.models.memory import Memory
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_openai import OpenAIEmbeddings
+from app.core.config import OPENAI_API_KEY
 from typing import List, Optional
 from uuid import UUID
 
 # Initialize embeddings model once
-embeddings_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2"
+embeddings_model = OpenAIEmbeddings(
+    model="text-embedding-3-large",
+    api_key=OPENAI_API_KEY
 )
 
 def add_chunks(

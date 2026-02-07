@@ -14,13 +14,36 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  nginx:
+    image: nginx:alpine
+    container_name: rag_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    restart: unless-stopped
+    depends_on:
+      - rag-backend
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   rag-backend:
     build: .
     image: rag-backend:latest
-    ports:
-      - "8000:8000"
+    # Port mapping removed - access through nginx only
+    # Uncomment below for direct access during development
+    # ports:
+    #   - "8000:8000"
     env_file:
       - .env
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
     volumes:
       - ./data:/app/data
     restart: unless-stopped

@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.api.routes import audio, ask, documents, conversations, calendar, memories
+from app.api.routes import audio, ask, documents, conversations, calendar, memories, auth
 from sqlalchemy import text
 from app.core.database import engine, Base
 from app.core.auth import initialize_firebase
@@ -8,7 +8,7 @@ from app.core.auth import initialize_firebase
 app = FastAPI(
     servers=[
         {"url": "http://localhost:8000", "description": "local"},
-        {"url": "http://38.242.215.255:8000", "description": "production"}
+        {"url": "https://transcribe.alterwork.in/api", "description": "production"}
     ]
 )
 
@@ -28,6 +28,7 @@ app.include_router(documents.router)
 app.include_router(conversations.router)
 app.include_router(calendar.router)
 app.include_router(memories.router)
+app.include_router(auth.router)
 
 
 @app.on_event("startup")

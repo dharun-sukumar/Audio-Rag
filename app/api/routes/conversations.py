@@ -38,6 +38,19 @@ def create_conversation(
     )
     db.add(conversation)
     db.flush()  # Get the conversation ID before adding messages
+    
+    # Check guest limits
+    if user.is_guest:
+        # User has requested 3 conversations limit for guests
+        # Check how many conversations this user already has
+        count = db.query(Conversation).filter(Conversation.user_id == user.id).count()
+        # count includes the one we just added (db.add), so limit + 1
+        if count > 3:
+            db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Guest limit reached. Please log in to continue."
+            )
 
     # Add initial messages if provided
     for msg_data in conversation_data.messages:

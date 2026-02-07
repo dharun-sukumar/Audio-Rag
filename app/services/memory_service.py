@@ -331,6 +331,10 @@ class MemoryService:
         
         if update_data.memory_date is not None:
             memory.memory_date = update_data.memory_date
+
+
+
+
         
         # Update tags
         if update_data.tag_ids is not None:

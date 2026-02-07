@@ -14,8 +14,8 @@ class Chunk(Base):
     memory_id = Column(UUID(as_uuid=True), ForeignKey("memories.id", ondelete="CASCADE"), nullable=True)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
     content = Column(Text, nullable=False)
-    # Using 384 dimensions for all-MiniLM-L6-v2. If you change models, update this.
-    embedding = Column(Vector(384)) 
+    # Using 3072 dimensions for text-embedding-3-large
+    embedding = Column(Vector(3072)) 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     document = relationship("Document")

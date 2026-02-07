@@ -1,7 +1,5 @@
 langchain
 langchain-community
-langchain
-langchain-community
 langchain-core
 pymupdf
 sentence-transformers
@@ -13,7 +11,6 @@ groq
 langchain-groq
 python-dotenv
 langchain_huggingface
-dotenv
 boto3
 tqdm
 assemblyai
@@ -23,3 +20,4 @@ psycopg2-binary
 sqlalchemy
 pgvector
 firebase-admin
+langchain-openai

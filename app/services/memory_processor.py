@@ -113,6 +113,21 @@ async def process_memory_background(memory_id: UUID, db: Session):
         except Exception as e:
             raise Exception(f"Failed to add to vector store: {str(e)}")
         
+        # Step 5: Semantic Distillation
+        try:
+            full_text = ""
+            if memory.media_type in [MediaType.AUDIO, MediaType.VIDEO] and chunks_to_index:
+                 full_text = " ".join(chunks_to_index) # Approximate full text from chunks
+            elif memory.media_type == MediaType.TEXT and chunks_to_index:
+                 full_text = " ".join(chunks_to_index) # Approximate full text
+
+            if full_text:
+                from app.services.distillation import process_semantic_memory
+                await process_semantic_memory(db, str(memory.id), full_text)
+                print(f"Memory {memory.id} distilled successfully")
+        except Exception as e:
+            print(f"Distillation failed (non-critical): {e}")
+
         # Update status to completed
         MemoryService.update_processing_status(
             db, memory_id, ProcessingStatus.COMPLETED

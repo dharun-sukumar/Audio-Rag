@@ -7,9 +7,9 @@ from app.services.rag import ask
 router = APIRouter()
 
 @router.post("/ask")
-def ask_question(
+async def ask_question(
     q: dict,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user)
 ):
-    return ask(db=db, user=user, query=q["query"])
+    return await ask(db=db, user=user, query=q["query"])

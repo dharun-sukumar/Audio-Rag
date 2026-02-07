@@ -1,7 +1,8 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Table, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Table, Enum as SQLEnum, Float
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 from app.core.database import Base
 import uuid
 import enum
@@ -81,3 +82,51 @@ class Memory(Base):
     # Relationships
     user = relationship("User", back_populates="memories")
     tags = relationship("Tag", secondary=memory_tags, back_populates="memories")
+    semantic_memory = relationship("SemanticMemory", back_populates="memory", uselist=False, cascade="all, delete-orphan")
+
+
+class SemanticMemory(Base):
+    """
+    Distilled semantic memory snapshot.
+    This is the long-term, abstracted memory used for RAG.
+    """
+    __tablename__ = "semantic_memories"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    memory_id = Column(UUID(as_uuid=True), ForeignKey("memories.id", ondelete="CASCADE"), nullable=False)
+    
+    content = Column(Text, nullable=False)  # The 3-6 sentence snapshot
+    emotion_weight = Column(Integer, nullable=True)  # 1-5
+    keywords = Column(ARRAY(String), nullable=True)  # Extracted keywords/patterns
+    
+    # Embedding for RAG (3072 dims for text-embedding-3-large)
+    embedding = Column(Vector(3072)) 
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Relationships
+    user = relationship("User")
+    memory = relationship("Memory", back_populates="semantic_memory")
+
+
+class EntityMemory(Base):
+    """
+    Consolidated memory about a specific entity (person, place, etc.)
+    """
+    __tablename__ = "entity_memories"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    
+    name = Column(String(255), nullable=False)
+    entity_type = Column(String(50), nullable=True) # Person, Place, Theme
+    summary = Column(Text, nullable=True)
+    observation_count = Column(Integer, default=1)
+    last_interaction = Column(DateTime(timezone=True), nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+    
+    # Relationships
+    user = relationship("User")

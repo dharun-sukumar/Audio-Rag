@@ -33,7 +33,8 @@ def merge_guest_account(
     current_user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
     if not current_user:
         # Fallback to email lookup if necessary
-        email = token_data.get("email")
+        from app.api.deps import normalize_email
+        email = normalize_email(token_data.get("email"))
         if email:
              current_user = db.query(User).filter(User.email == email).first()
     
@@ -44,30 +45,34 @@ def merge_guest_account(
         )
 
     # 2. Get Guest User
-    if current_user.guest_id == request.guest_id:
-        # User is trying to merge their own guest_id which might already be attached?
-        # If they are authenticated, they shouldn't be using guest_id as primary anymore.
-        pass
-
     guest_user = db.query(User).filter(
         User.guest_id == request.guest_id
     ).first()
     
+    # Handle edge cases with idempotency
     if not guest_user:
-        return {"message": "Guest user not found or already merged"}
-        
+        # Guest already merged or doesn't exist - return success (idempotent)
+        return {"status": "success", "message": "Merge completed"}
+    
     if guest_user.id == current_user.id:
-        return {"message": "Nothing to merge"}
+        # Same user - just clear guest_id and return success
+        current_user.guest_id = None
+        current_user.is_guest = False
+        db.commit()
+        return {"status": "success", "message": "Guest account upgraded"}
         
     if not guest_user.is_guest:
         # Security check: don't merge another real user
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cannot merge a non-guest account"
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Cannot merge authenticated accounts"
         )
 
     # 3. Transactional Merge
-    try:     
+    try:
+        # Set transaction isolation level for consistency
+        db.execute(text("SET TRANSACTION ISOLATION LEVEL SERIALIZABLE"))
+        
         # A. Move Conversations
         # Update user_id for all conversations belonging to guest
         conversations = db.query(Conversation).filter(Conversation.user_id == guest_user.id).all()
@@ -104,7 +109,8 @@ def merge_guest_account(
                     if existing_tag not in memory.tags:
                         memory.tags.append(existing_tag)
                     # Remove guest_tag
-                    memory.tags.remove(guest_tag)
+                    if guest_tag in memory.tags:
+                        memory.tags.remove(guest_tag)
                 
                 # Now guest_tag has no memories, we can delete it
                 db.delete(guest_tag)
@@ -112,16 +118,23 @@ def merge_guest_account(
                 # No conflict, just transfer ownership
                 guest_tag.user_id = current_user.id
         
-        # D. Delete Guest User
+        # D. Clear guest_id from current user if set
+        if current_user.guest_id:
+            current_user.guest_id = None
+        current_user.is_guest = False
+        
+        # E. Delete Guest User
         db.delete(guest_user)
         
         db.commit()
-        return {"status": "success", "message": "Merged successfully"}
+        return {"status": "success", "message": "Account merged successfully"}
         
     except Exception as e:
         db.rollback()
-        print(f"Merge error: {e}")
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Merge error: {e}\n{error_details}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to merge account data"
+            detail="Failed to merge account data. Please try again."
         )

@@ -37,8 +37,8 @@ services:
     image: rag-backend:latest
     # Port mapping removed - access through nginx only
     # Uncomment below for direct access during development
-    # ports:
-    #   - "8000:8000"
+    ports:
+      - "8000:8000"
     env_file:
       - .env
     environment:

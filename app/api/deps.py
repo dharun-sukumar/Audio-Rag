@@ -1,9 +1,15 @@
 from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import func
+from sqlalchemy.dialects.postgresql import insert
 from app.core.auth import verify_firebase_token, verify_firebase_token_optional
 from app.core.database import get_db
 from app.models.user import User
+
+
+def normalize_email(email: str | None) -> str | None:
+    """Normalize email to lowercase and strip whitespace."""
+    return email.strip().lower() if email else None
 
 def get_current_user(
     token_data: dict = Depends(verify_firebase_token_optional),
@@ -21,63 +27,65 @@ def get_current_user(
     
     # 1. Handle Authenticated User (Firebase Token)
     if token_data:
-        # Look up user by Firebase UID
-        user = db.query(User).filter(
-            User.firebase_uid == token_data["uid"]
-        ).first()
-
-        if not user:
-            # Check if user exists by email (to handle UID changes or database inconsistencies)
-            email = token_data.get("email")
-            if email:
-                email = email.strip().lower()
-                user = db.query(User).filter(User.email == email).first()
-
-            if user:
-                # Update existing user's Firebase UID
-                user.firebase_uid = token_data["uid"]
-                user.name = token_data.get("name") or user.name
-                user.picture = token_data.get("picture") or user.picture
-                user.last_seen_at = func.now()
+        email = normalize_email(token_data.get("email"))
+        firebase_uid = token_data["uid"]
+        
+        # Use UPSERT to handle race conditions
+        # Try to find existing user first
+        user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+        
+        if not user and email:
+            # Check by email (handle UID changes)
+            user = db.query(User).filter(User.email == email).first()
+        
+        if user:
+            # Update existing user
+            user.firebase_uid = firebase_uid
+            user.email = email or user.email
+            user.name = token_data.get("name") or user.name
+            user.picture = token_data.get("picture") or user.picture
+            user.is_guest = False
+            user.guest_id = None  # Clear guest_id on authenticated users
+            user.last_seen_at = func.now()
+            db.commit()
+            db.refresh(user)
+        else:
+            # Create new user with race condition handling
+            try:
+                user = User(
+                    firebase_uid=firebase_uid,
+                    email=email,
+                    name=token_data.get("name"),
+                    picture=token_data.get("picture"),
+                    is_guest=False,
+                    guest_id=None,
+                    last_seen_at=func.now()
+                )
                 db.add(user)
                 db.commit()
                 db.refresh(user)
-            else:
-                # Create new user
-                try:
-                    user = User(
-                        firebase_uid=token_data["uid"],
-                        email=email,
-                        name=token_data.get("name"),
-                        picture=token_data.get("picture"),
-                        is_guest=False,
-                        last_seen_at=func.now()
+            except Exception as e:
+                # Handle race condition - another request created the user
+                db.rollback()
+                user = db.query(User).filter(User.firebase_uid == firebase_uid).first()
+                if not user and email:
+                    user = db.query(User).filter(User.email == email).first()
+                if not user:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create or retrieve user account"
                     )
-                    db.add(user)
-                    db.commit()
-                    db.refresh(user)
-                except Exception as e:
-                    # Handle race condition or data inconsistency
-                    db.rollback()
-                    if email:
-                        user = db.query(User).filter(User.email == email).first()
-                        if user:
-                            # If we found them on retry, update and return
-                            user.firebase_uid = token_data["uid"]
-                            user.name = token_data.get("name") or user.name
-                            user.picture = token_data.get("picture") or user.picture
-                            user.last_seen_at = func.now()
-                            db.add(user)
-                            db.commit()
-                            db.refresh(user)
-                            return user
-                    # If we still fail, re-raise
-                    raise e
-        else:
-            # Existing user found via UID, just update last_seen
-            user.last_seen_at = func.now()
-            db.commit()
-            
+                # Update the found user
+                user.firebase_uid = firebase_uid
+                user.email = email or user.email
+                user.name = token_data.get("name") or user.name
+                user.picture = token_data.get("picture") or user.picture
+                user.is_guest = False
+                user.guest_id = None
+                user.last_seen_at = func.now()
+                db.commit()
+                db.refresh(user)
+        
         return user
 
     # 2. Handle Guest User (X-Guest-ID)
@@ -86,6 +94,13 @@ def get_current_user(
         user = db.query(User).filter(
             User.guest_id == x_guest_id
         ).first()
+        
+        # Security check BEFORE any modifications
+        if user and not user.is_guest:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Invalid guest access to authenticated account"
+            )
         
         if not user:
             # Create new guest user
@@ -104,19 +119,14 @@ def get_current_user(
                 db.rollback()
                 user = db.query(User).filter(User.guest_id == x_guest_id).first()
                 if not user:
-                    raise e
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Failed to create guest user"
+                    )
         else:
-             # Update last seen
+            # Update last seen
             user.last_seen_at = func.now()
             db.commit()
-
-        if not user.is_guest:
-             # Security check: Don't allow accessing a real account via guest_id
-             # This shouldn't happen if logic is correct, but safe to check
-             raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Invalid guest access to authenticated account"
-             )
 
         return user
 

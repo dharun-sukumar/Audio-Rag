@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Table, Enum as SQLEnum, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Text, Table, Enum as SQLEnum, Float, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -46,6 +46,11 @@ class Tag(Base):
     # Relationships
     user = relationship("User", back_populates="tags")
     memories = relationship("Memory", secondary=memory_tags, back_populates="tags")
+    
+    # Constraints
+    __table_args__ = (
+        UniqueConstraint('user_id', 'name', name='uq_user_tag_name'),
+    )
 
 
 class Memory(Base):
